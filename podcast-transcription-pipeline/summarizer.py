@@ -3,9 +3,10 @@ import logging
 import sys
 import time
 from ollama import Client
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 OLLAMA_MODEL = "mistral"  # Change to your preferred Ollama model
+SEMANTIC_BLOCKS_PATH = "semantic_blocks.json"
+OUTPUT_SUMMARIES_PATH = "summaries.json"
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -21,8 +22,10 @@ def load_blocks(path):
         return json.load(f)
 
 def ollama_call(client, prompt, system=None):
+    logger.info(f"LLM INPUT PROMPT:\n{prompt}\n")
     response = client.generate(model=OLLAMA_MODEL, prompt=prompt, system=system)
     output = response['response'].strip()
+    logger.info(f"LLM OUTPUT:\n{output}\n")
     return output
 
 def extract_topic(client, text):
@@ -62,18 +65,10 @@ def extract_key_points(client, text, topic):
     key_points = [line.lstrip("-•* ").strip() for line in output.splitlines() if line.strip()]
     return key_points
 
-
-def summarize_blocks(blocks, output_path):
-    """
-    Summarize semantic blocks and save output to output_path.
-    Args:
-        blocks (list): List of semantic block dicts with 'block_id' and 'text'.
-        output_path (str): Path to save the summary JSON.
-    Returns:
-        dict: The summary output.
-    """
+def main():
     start_time = time.time()
     client = Client()
+    blocks = load_blocks(SEMANTIC_BLOCKS_PATH)
 
     # --- Global topic and summary ---
     logger.info("Generating global topic and summary...")
@@ -81,60 +76,33 @@ def summarize_blocks(blocks, output_path):
     global_topic = extract_topic(client, all_text)
     global_summary = generate_summary(client, all_text, global_topic)
 
-    # --- Blockwise summaries (parallelized) ---
-    def process_block(block):
+    # --- Blockwise summaries ---
+    block_outputs = []
+    for block in blocks:
         block_text = block["text"]
         block_topic = extract_topic(client, block_text)
         block_summary = generate_summary(client, block_text, block_topic)
         themes = extract_themes(client, block_text, block_topic)
         key_points = extract_key_points(client, block_text, block_topic)
-        logger.info(f"Block {block['block_id']} processed.")
-        return {
+        block_outputs.append({
             "block_id": block["block_id"],
             "topic": block_topic,
             "summary": block_summary,
             "themes": themes,
             "key_points": key_points
-        }
+        })
+        logger.info(f"Block {block['block_id']} processed.")
 
-    block_outputs = []
-    max_workers = min(4, len(blocks))  # Limit concurrency to 4 threads for resource safety
-    try:
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_block = {executor.submit(process_block, block): block for block in blocks}
-            for future in as_completed(future_to_block):
-                block_result = future.result()
-                block_outputs.append(block_result)
-    except Exception as e:
-        logger.warning(f"Parallel processing failed ({e}), falling back to single-threaded execution.")
-        for block in blocks:
-            block_outputs.append(process_block(block))
-
-    # Sort block_outputs by block_id to preserve order
-    block_outputs.sort(key=lambda b: b["block_id"])
     output = {
         "global_summary": global_summary,
         "global_topic": global_topic,
         "blocks": block_outputs
     }
-    logger.info(f"Saving output to {output_path}")
-    with open(output_path, "w", encoding="utf-8") as f:
+    logger.info(f"Saving output to {OUTPUT_SUMMARIES_PATH}")
+    with open(OUTPUT_SUMMARIES_PATH, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
     total_time = time.time() - start_time
     logger.info(f"Summarization complete. Total time: {total_time:.2f} seconds.")
-    return output
-
-
-# Note: This script only writes summaries.json (or the output_path you specify).
-# It does NOT store any other files or logs on your device except for the summary output.
-# Ollama model files and logs are managed by the Ollama server and cannot be controlled by this script.
 
 if __name__ == "__main__":
-    # For CLI usage: python summarizer.py semantic_blocks.json summaries.json
-    import argparse
-    parser = argparse.ArgumentParser(description="Semantic block summarizer")
-    parser.add_argument("blocks_path", type=str, help="Path to semantic_blocks.json")
-    parser.add_argument("output_path", type=str, help="Path to save summaries.json")
-    args = parser.parse_args()
-    blocks = load_blocks(args.blocks_path)
-    summarize_blocks(blocks, args.output_path)
+    main()

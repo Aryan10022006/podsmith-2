@@ -20,7 +20,6 @@ MODEL_CONFIG = {
     },
     "semantic_analysis": {
         "topic_model": "topic-classifier-model",
-        "summary_model": "summarization-model",
         "keyword_model": "keyword-extractor-model"
     },
     "output": {

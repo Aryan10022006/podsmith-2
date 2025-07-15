@@ -14,13 +14,10 @@ class Settings:
     DEFAULT_EMOTION_TEXT_MODEL = "j-hartmann/emotion-english-distilroberta-base"
     DEFAULT_EMOTION_AUDIO_MODEL = "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
     DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-    DEFAULT_SUMMARIZATION_MODEL = "facebook/bart-large-cnn"
     
     # Processing defaults
     DEFAULT_CONFIDENCE_THRESHOLD = 0.6
     DEFAULT_MAX_KEYWORDS = 20
-    DEFAULT_SUMMARY_MAX_LENGTH = 150
-    DEFAULT_SUMMARY_MIN_LENGTH = 30
     
     # File paths
     DEFAULT_OUTPUT_DIR = "./output"
@@ -60,13 +57,6 @@ class Settings:
                 "clustering_method": "kmeans",
                 "min_topic_confidence": 0.3,
                 "max_topics_per_block": 3
-            },
-            "summarization": {
-                "model": cls.DEFAULT_SUMMARIZATION_MODEL,
-                "max_length": cls.DEFAULT_SUMMARY_MAX_LENGTH,
-                "min_length": cls.DEFAULT_SUMMARY_MIN_LENGTH,
-                "length_penalty": 2.0,
-                "num_beams": 4
             },
             "keywords": {
                 "method": "tfidf",
@@ -110,9 +100,6 @@ class Settings:
             "emotion": {
                 "text": {"vram_gb": 1, "ram_gb": 2, "disk_gb": 0.5},
                 "audio": {"vram_gb": 2, "ram_gb": 4, "disk_gb": 1}
-            },
-            "summarization": {
-                "default": {"vram_gb": 2, "ram_gb": 4, "disk_gb": 1}
             }
         }
     

@@ -85,7 +85,6 @@ class SessionManager:
             "text_emotions": "emotions_text.json", 
             "audio_emotions": "emotions_audio.json",
             "semantic_segmentation": "semantic_blocks.json",
-            "summarization": "summaries.json",
             "keyword_extraction": "keywords_topics.json",
             "validation": "validation_report.json"
         }
@@ -151,7 +150,6 @@ class SessionManager:
             "emotions_audio": session_dir / "emotions_audio.json",
             "emotions": session_dir / "emotions_combined.json",  # Combined emotions
             "semantic_blocks": session_dir / "semantic_blocks.json",
-            "summaries": session_dir / "summaries.json",
             "keywords_topics": session_dir / "keywords_topics.json",
             "validation_report": session_dir / "validation_report.json",
             "processing_log": session_dir / "processing_log.txt"

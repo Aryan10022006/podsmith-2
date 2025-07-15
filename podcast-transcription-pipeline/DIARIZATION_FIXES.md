@@ -14,7 +14,7 @@
 
 ### 3. 💾 **Memory Management Enhancement**
 - **Problem**: Memory accumulation between pipeline steps
-- **Solution**: Added memory cleanup after each major step (transcription, diarization, emotion detection, segmentation, summarization)
+## Summarization feature removed
 - **Impact**: Prevents memory exhaustion on large files
 
 ### 4. ⚡ **Progressive Step Timing**

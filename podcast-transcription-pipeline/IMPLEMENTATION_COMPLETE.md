@@ -58,7 +58,7 @@ podcast-transcription-pipeline/
 │   ├── 📁 analysis/               # Semantic analysis
 │   │   ├── emotion_detector.py       # Emotion/sentiment analysis
 │   │   ├── semantic_segmenter.py     # Content segmentation
-│   │   ├── summarizer.py             # Text summarization
+│   │   # summarizer.py removed
 │   │   ├── keyword_extractor.py      # Keyword/phrase extraction
 │   │   └── topic_classifier.py       # Content classification
 │   │

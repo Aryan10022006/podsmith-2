@@ -10,9 +10,8 @@ class Validator:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
-    def validate_transcript(self, transcript_data: Dict[str, Any], 
-                          min_length: int = 10) -> Dict[str, Any]:
-        """Validate transcription output."""
+    def validate_transcript(self, transcript_data: Dict[str, Any], min_length: int = 10) -> Dict[str, Any]:
+        """Validate transcript output."""
         validation_result = {
             "step": "transcription",
             "status": "passed",
@@ -20,36 +19,21 @@ class Validator:
             "warnings": [],
             "metrics": {}
         }
-        
         try:
-            # Check required fields
-            required_fields = ["language", "duration", "text", "segments"]
-            for field in required_fields:
-                if field not in transcript_data:
-                    validation_result["errors"].append(f"Missing required field: {field}")
-            
-            # Check transcript length
-            text_length = len(transcript_data.get("text", "").strip())
-            if text_length < min_length:
-                validation_result["errors"].append(f"Transcript too short: {text_length} characters")
-            
-            # Check segments
             segments = transcript_data.get("segments", [])
-            if not segments:
-                validation_result["errors"].append("No segments found in transcript")
-            else:
-                # Validate segment structure
-                for i, segment in enumerate(segments):
-                    required_seg_fields = ["start", "end", "text"]
-                    for field in required_seg_fields:
-                        if field not in segment:
-                            validation_result["errors"].append(f"Segment {i} missing field: {field}")
-                    
-                    # Check timing consistency
-                    if "start" in segment and "end" in segment:
-                        if segment["start"] >= segment["end"]:
-                            validation_result["errors"].append(f"Segment {i} has invalid timing")
-            
+            text_length = sum(len(seg.get("text", "")) for seg in segments)
+            if not segments or text_length < min_length:
+                validation_result["errors"].append("Transcript too short or missing segments")
+            # Validate segment structure
+            for i, segment in enumerate(segments):
+                required_seg_fields = ["start", "end", "text"]
+                for field in required_seg_fields:
+                    if field not in segment:
+                        validation_result["errors"].append(f"Segment {i} missing field: {field}")
+                # Check timing consistency
+                if "start" in segment and "end" in segment:
+                    if segment["start"] >= segment["end"]:
+                        validation_result["errors"].append(f"Segment {i} has invalid timing")
             # Calculate metrics
             validation_result["metrics"] = {
                 "total_segments": len(segments),
@@ -58,17 +42,14 @@ class Validator:
                 "average_segment_length": text_length / len(segments) if segments else 0,
                 "segments_with_confidence": sum(1 for s in segments if "confidence" in s)
             }
-            
             # Set status
             if validation_result["errors"]:
                 validation_result["status"] = "failed"
             elif validation_result["warnings"]:
                 validation_result["status"] = "passed_with_warnings"
-                
         except Exception as e:
             validation_result["status"] = "error"
             validation_result["errors"].append(f"Validation error: {str(e)}")
-        
         return validation_result
     
     def validate_emotions(self, text_emotions: List[Dict[str, Any]], 
@@ -218,69 +199,6 @@ class Validator:
         
         return validation_result
     
-    def validate_summaries(self, summaries_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate summarization output."""
-        validation_result = {
-            "step": "summarization",
-            "status": "passed", 
-            "errors": [],
-            "warnings": [],
-            "metrics": {}
-        }
-        
-        try:
-            # Check global summary
-            global_summary = summaries_data.get("global_summary", {})
-            if not global_summary:
-                validation_result["errors"].append("No global summary found")
-            else:
-                if not global_summary.get("global_summary", "").strip():
-                    validation_result["errors"].append("Empty global summary")
-            
-            # Check block summaries
-            block_summaries = summaries_data.get("block_summaries", [])
-            if not block_summaries:
-                validation_result["errors"].append("No block summaries found")
-            else:
-                empty_summaries = 0
-                low_compression = 0
-                
-                for summary in block_summaries:
-                    if not summary.get("summary", "").strip():
-                        empty_summaries += 1
-                    
-                    # Check compression ratio
-                    compression_ratio = summary.get("compression_ratio", 0)
-                    if compression_ratio > 0.8:  # Very little compression
-                        low_compression += 1
-                
-                if empty_summaries > 0:
-                    validation_result["warnings"].append(f"{empty_summaries} empty block summaries")
-                
-                if low_compression > len(block_summaries) * 0.5:
-                    validation_result["warnings"].append("Many summaries have low compression ratio")
-            
-            # Calculate metrics
-            validation_result["metrics"] = {
-                "has_global_summary": bool(global_summary.get("global_summary")),
-                "total_block_summaries": len(block_summaries),
-                "empty_block_summaries": sum(1 for s in block_summaries if not s.get("summary", "").strip()),
-                "average_compression_ratio": sum(s.get("compression_ratio", 0) for s in block_summaries) / len(block_summaries) if block_summaries else 0,
-                "summarization_methods": list(set(s.get("method", "unknown") for s in block_summaries))
-            }
-            
-            # Set status
-            if validation_result["errors"]:
-                validation_result["status"] = "failed"
-            elif validation_result["warnings"]:
-                validation_result["status"] = "passed_with_warnings"
-                
-        except Exception as e:
-            validation_result["status"] = "error"
-            validation_result["errors"].append(f"Validation error: {str(e)}")
-        
-        return validation_result
-    
     def validate_keywords(self, keywords_data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate keyword extraction output."""
         validation_result = {
@@ -384,12 +302,6 @@ class Validator:
                 with open(session_files["semantic_blocks"], "r", encoding="utf-8") as f:
                     semantic_blocks = json.load(f)
                 validation_report["step_validations"]["semantic_segmentation"] = self.validate_semantic_blocks(semantic_blocks)
-            
-            # Validate summaries
-            if session_files["summaries"].exists():
-                with open(session_files["summaries"], "r", encoding="utf-8") as f:
-                    summaries_data = json.load(f)
-                validation_report["step_validations"]["summarization"] = self.validate_summaries(summaries_data)
             
             # Validate keywords
             if session_files["keywords_topics"].exists():

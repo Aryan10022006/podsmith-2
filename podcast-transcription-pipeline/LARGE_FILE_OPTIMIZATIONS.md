@@ -6,23 +6,11 @@ Successfully implemented comprehensive optimizations for processing large audio 
 ## Key Optimizations Implemented
 
 ### 1. Large File Detection
-- **File Size Monitoring**: Automatically detects files > 50MB as "large files"
-- **Early Warning**: Logs optimization activation for large files
-- **Metadata Tracking**: Stores file size and optimization flags in session info
 
 ### 2. Optimized Summarization Pipeline (`_process_summarization_optimized`)
-- **Batch Processing**: Processes semantic blocks in batches of 10 instead of individually
-- **Block Limits**: Limits processing to first 100 blocks for very large files
-- **Timeout Protection**: 
   - Per-block timeout: 30 seconds
   - Total timeout: 15 minutes
-- **Fallback Handling**: Creates minimal summaries if full processing fails
-- **Progress Monitoring**: Detailed logging of batch progress
-
-### 3. Enhanced Summarizer with Batch Processing (`summarize_blocks_batch`)
-- **True Batch Processing**: Processes multiple blocks simultaneously
-- **Model-Specific Optimization**: Different strategies for BART vs other models
-- **Memory Efficiency**: Smaller adaptive length limits for summaries
+### Summarization feature removed
 - **Error Resilience**: Continues processing even if individual batches fail
 
 ### 4. Semantic Segmentation Optimization

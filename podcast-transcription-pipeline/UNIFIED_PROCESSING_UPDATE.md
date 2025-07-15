@@ -119,7 +119,7 @@ Expected output:
 🚀 Starting unified audio processing...
 ✅ Unified pipeline completed successfully!
 
-📊 Processing Summary:
+## Summarization feature removed
    Total Time: 45.23 seconds
    Shared Embeddings Used: True
    

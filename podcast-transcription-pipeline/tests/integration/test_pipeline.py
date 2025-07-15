@@ -20,7 +20,6 @@ class TestPipelineIntegration(unittest.TestCase):
             "diarization": {"model": "test-model"},
             "emotion": {"text_model": "test-emotion", "confidence_threshold": 0.5},
             "topics": {"model": "test-topics", "max_topics_per_block": 3},
-            "summarization": {"model": "test-summary", "max_length": 150, "min_length": 30},
             "keywords": {"method": "tfidf", "max_keywords_global": 20, "max_keywords_per_block": 10, "min_keyword_score": 0.1},
             "validation": {"min_confidence_threshold": 0.6},
             "output": {"base_dir": self.temp_dir}
@@ -54,8 +53,7 @@ class TestPipelineIntegration(unittest.TestCase):
     @patch('src.transcription.whisper_transcriber.whisper')
     @patch('src.transcription.diarization.Pipeline')
     @patch('src.analysis.emotion_detector.pipeline')
-    @patch('src.analysis.summarizer.pipeline')
-    def test_complete_pipeline_process(self, mock_sum_pipeline, mock_emotion_pipeline, 
+    def test_complete_pipeline_process(self, mock_emotion_pipeline, 
                                      mock_diarization_pipeline, mock_whisper, mock_open, mock_yaml):
         """Test complete pipeline processing with mocked components."""
         mock_yaml.return_value = self.mock_config
@@ -86,11 +84,6 @@ class TestPipelineIntegration(unittest.TestCase):
         mock_emotion_pipe = MagicMock()
         mock_emotion_pipe.return_value = [[{"label": "neutral", "score": 0.8}]]
         mock_emotion_pipeline.return_value = mock_emotion_pipe
-        
-        # Mock summarization
-        mock_sum_pipe = MagicMock()
-        mock_sum_pipe.return_value = [{"summary_text": "This is a test summary."}]
-        mock_sum_pipeline.return_value = mock_sum_pipe
         
         # Mock file operations for various components
         with patch('src.analysis.semantic_segmenter.SentenceTransformer', return_value=None):

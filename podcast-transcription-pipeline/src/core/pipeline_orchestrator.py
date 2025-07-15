@@ -19,8 +19,8 @@ from src.transcription.diarization import SpeakerDiarizer
 from src.transcription.transcript_formatter import TranscriptFormatter
 from src.analysis.emotion_detector import EmotionDetector
 from src.analysis.semantic_segmenter import SemanticSegmenter
-from src.analysis.summarizer import Summarizer
 from src.analysis.keyword_extractor import KeywordExtractor
+from src.analysis import summarizer
 
 class PipelineOrchestrator:
     """Main orchestrator for the podcast transcription and analysis pipeline with detailed timing."""
@@ -41,7 +41,6 @@ class PipelineOrchestrator:
         self.diarizer = None
         self.emotion_detector = None
         self.segmenter = None
-        self.summarizer = None
         self.keyword_extractor = None
         
         # Setup logging
@@ -66,7 +65,6 @@ class PipelineOrchestrator:
             "diarization": {"model": "pyannote/speaker-diarization-3.1"},
             "emotion": {"text_model": "j-hartmann/emotion-english-distilroberta-base"},
             "topics": {"model": "sentence-transformers/all-MiniLM-L6-v2"},
-            "summarization": {"model": "facebook/bart-large-cnn"},
             "keywords": {"method": "tfidf"},
             "validation": {"min_confidence_threshold": 0.6},
             "output": {"base_dir": "./output"}
@@ -111,11 +109,6 @@ class PipelineOrchestrator:
         # Initialize transcript formatter
         self.transcript_formatter = TranscriptFormatter()
         
-        if self.summarizer is None:
-            self.summarizer = Summarizer(
-                model_name=self.config["summarization"]["model"],
-                device_manager=self.device_manager
-            )
         
         if self.keyword_extractor is None:
             self.keyword_extractor = KeywordExtractor(
@@ -200,21 +193,41 @@ class PipelineOrchestrator:
             # Memory management after emotion detection
             self._manage_memory_for_large_files(session_info)
             
-            # Continue with remaining steps (optimized for large files)...
+            # Step 6: Semantic segmentation
             step_start = time.time()
             self.logger.info("Step 6: Performing semantic segmentation...")
             semantic_blocks = self._process_semantic_segmentation(diarized_transcript, session_info, session_files)
             self.step_timings["semantic_segmentation"] = time.time() - step_start
-            
+
             # Memory management after segmentation
             self._manage_memory_for_large_files(session_info)
-            
-            # Optimize summarization for large files
+
+            # --- Summarization step ---
             step_start = time.time()
-            self.logger.info("Step 7: Performing optimized summarization...")
-            summaries = self._process_summarization_optimized(semantic_blocks, session_info, session_files)
-            self.step_timings["summarization"] = time.time() - step_start
-            
+            self.logger.info("Step 7: Performing semantic summarization with LLM...")
+            # Fix: Avoid KeyError 'session_dir' by constructing output path robustly
+            if "summary_json" in session_files:
+                summary_output_path = str(session_files["summary_json"])
+            elif "semantic_blocks" in session_files:
+                # Place summary.json next to semantic_blocks.json
+                summary_output_path = str(Path(session_files["semantic_blocks"]).parent / "summary.json")
+            elif "output_dir" in session_info:
+                summary_output_path = str(Path(session_info["output_dir"]) / "summary.json")
+            else:
+                summary_output_path = "summary.json"
+            try:
+                # Load semantic blocks from file if needed
+                if isinstance(semantic_blocks, str):
+                    with open(semantic_blocks, "r", encoding="utf-8") as f:
+                        semantic_blocks_data = json.load(f)
+                else:
+                    semantic_blocks_data = semantic_blocks
+                summarizer.summarize_blocks(semantic_blocks_data, summary_output_path)
+                self.logger.info(f"Semantic summary saved to {summary_output_path}")
+            except Exception as e:
+                self.logger.error(f"Summarization failed: {e}")
+            self.step_timings["semantic_summarization"] = time.time() - step_start
+
             # Memory management after summarization
             self._manage_memory_for_large_files(session_info)
             
@@ -449,76 +462,6 @@ class PipelineOrchestrator:
             
         except Exception as e:
             self.session_manager.update_session_status(session_info, "semantic_segmentation", "failed",
-                                                     {"error": str(e)})
-            raise
-    
-    def _process_summarization(self, semantic_blocks: List[Dict[str, Any]],
-                             session_info: Dict[str, Any], session_files: Dict[str, Path]) -> Dict[str, Any]:
-        """Process summarization step."""
-        if self.session_manager.should_skip_step(session_info, "summarization"):
-            self.logger.info("Skipping summarization (already completed)")
-            with open(session_files["summaries"], "r", encoding="utf-8") as f:
-                return json.load(f)
-        
-        self.logger.info("Starting summarization...")
-
-        # --- Enrich semantic blocks with keywords and emotions ---
-        # Load keywords
-        keywords_path = session_files.get("keywords_topics")
-        block_keywords_map = {}
-        if keywords_path and os.path.exists(keywords_path):
-            with open(keywords_path, "r", encoding="utf-8") as f:
-                keywords_data = json.load(f)
-            block_keywords = keywords_data.get("block_keywords", [])
-            for bk in block_keywords:
-                block_id = bk.get("block_id")
-                block_keywords_map[block_id] = bk.get("keywords", [])
-
-        # Load emotions (optional)
-        emotions_path = session_files.get("emotions")
-        block_emotions_map = {}
-        if emotions_path and os.path.exists(emotions_path):
-            with open(emotions_path, "r", encoding="utf-8") as f:
-                emotions_data = json.load(f)
-            for em in emotions_data.get("block_emotions", []):
-                block_id = em.get("block_id")
-                block_emotions_map[block_id] = em.get("emotions", [])
-
-        # Enrich blocks
-        enriched_blocks = []
-        for block in semantic_blocks:
-            block_id = block.get("block_id")
-            block = dict(block)  # Copy to avoid mutating original
-            if block_id in block_keywords_map:
-                block["topic_keywords"] = block_keywords_map[block_id]
-            if block_id in block_emotions_map:
-                block["emotions"] = block_emotions_map[block_id]
-            enriched_blocks.append(block)
-
-        try:
-            # Generate block summaries
-            block_summaries = self.summarizer.summarize_blocks(
-                enriched_blocks,
-                max_length=self.config["summarization"].get("max_length", 150),
-                min_length=self.config["summarization"].get("min_length", 30)
-            )
-
-            # Generate global summary
-            global_summary = self.summarizer.generate_global_summary(
-                enriched_blocks,
-                block_summaries
-            )
-
-            # Save summaries
-            self.summarizer.save_summaries(block_summaries, global_summary, session_files["summaries"])
-
-            self.session_manager.update_session_status(session_info, "summarization", "completed")
-            self.logger.info("Summarization completed successfully")
-
-            return {"block_summaries": block_summaries, "global_summary": global_summary}
-
-        except Exception as e:
-            self.session_manager.update_session_status(session_info, "summarization", "failed",
                                                      {"error": str(e)})
             raise
     
@@ -1001,108 +944,6 @@ class PipelineOrchestrator:
         self.logger.info(f"Unified emotion detection completed: text={len(text_emotions)}, audio={len(audio_emotions)}")
         
         return text_emotions, audio_emotions
-
-    def _process_summarization_optimized(self, semantic_blocks: List[Dict[str, Any]],
-                                        session_info: Dict[str, Any], session_files: Dict[str, Path]) -> Dict[str, Any]:
-        """Process summarization step with optimizations for large files."""
-        if self.session_manager.should_skip_step(session_info, "summarization"):
-            self.logger.info("Skipping summarization (already completed)")
-            with open(session_files["summaries"], "r", encoding="utf-8") as f:
-                return json.load(f)
-        
-        self.logger.info("Starting optimized summarization for large files...")
-        
-        # Performance parameters for large files
-        max_blocks_per_batch = 10
-        max_total_blocks = 100  # Limit for very large files
-        total_timeout_minutes = 15
-        from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
-        num_blocks = len(semantic_blocks)
-        # Start total timeout timer
-        start_time = time.time()
-        # Process blocks in batches for better performance
-        all_block_summaries = []
-        batch_size = min(max_blocks_per_batch, num_blocks)
-        for batch_start in range(0, num_blocks, batch_size):
-            batch_end = min(batch_start + batch_size, num_blocks)
-            batch_blocks = semantic_blocks[batch_start:batch_end]
-            # Check timeout
-            elapsed_minutes = (time.time() - start_time) / 60
-            if elapsed_minutes > total_timeout_minutes:
-                self.logger.warning(f"Summarization timeout reached ({total_timeout_minutes}m). "
-                                  f"Processed {len(all_block_summaries)}/{num_blocks} blocks.")
-                break
-            self.logger.info(f"Processing batch {batch_start//batch_size + 1} "
-                           f"(blocks {batch_start+1}-{batch_end}) of {(num_blocks-1)//batch_size + 1}")
-            # Use batch processing for better performance
-            batch_summaries = self.summarizer.summarize_blocks_batch(
-                batch_blocks,
-                max_length=self.config["summarization"].get("max_length", 100),  # Shorter for speed
-                min_length=self.config["summarization"].get("min_length", 20),   # Shorter for speed
-                batch_size=min(5, len(batch_blocks))  # Smaller batches for stability
-            )
-            all_block_summaries.extend(batch_summaries)
-        # Generate global summary only if we have some block summaries
-        if all_block_summaries:
-            self.logger.info("Generating optimized global summary...")
-            # Use only top blocks for global summary to avoid timeout
-            top_blocks = semantic_blocks[:min(20, len(semantic_blocks))]
-            global_summary = self.summarizer.generate_global_summary(
-                top_blocks,
-                all_block_summaries[:min(20, len(all_block_summaries))]
-            )
-        else:
-            global_summary = {
-                "summary": "No summaries generated due to processing constraints.",
-                "key_themes": []
-            }
-        # Save summaries
-        final_result = {"block_summaries": all_block_summaries, "global_summary": global_summary}
-        self.summarizer.save_summaries(all_block_summaries, global_summary, session_files["summaries"])
-        total_time = time.time() - start_time
-        self.session_manager.update_session_status(session_info, "summarization", "completed",
-            {
-                "blocks_processed": len(all_block_summaries),
-                "total_blocks": num_blocks,
-                "processing_time": total_time,
-                "optimized": True
-            })
-        self.logger.info(f"Optimized summarization completed: {len(all_block_summaries)}/{num_blocks} blocks in {total_time:.2f}s")
-        return final_result
-    
-    def _create_minimal_summaries(self, semantic_blocks: List[Dict[str, Any]], 
-                                 session_files: Dict[str, Path]) -> Dict[str, Any]:
-        """Create minimal summaries when full processing fails."""
-        self.logger.info("Creating minimal fallback summaries...")
-        
-        minimal_summaries = []
-        for i, block in enumerate(semantic_blocks[:20]):  # Limit to first 20 blocks
-            text = block.get('text', '')
-            minimal_summary = {
-                'block_id': block.get('block_id', i),
-                'summary': text[:200] + "..." if len(text) > 200 else text,
-                'key_points': [text[:100] + "..." if len(text) > 100 else text],
-                'processing_time': 0.0,
-                'minimal_fallback': True
-            }
-            minimal_summaries.append(minimal_summary)
-        
-        global_summary = {
-            "summary": "Processing optimized for large file. Detailed analysis limited to preserve performance.",
-            "key_themes": ["Large file processing", "Performance optimization"],
-            "minimal_fallback": True
-        }
-        
-        # Save minimal summaries
-        result = {"block_summaries": minimal_summaries, "global_summary": global_summary}
-        
-        try:
-            with open(session_files["summaries"], "w", encoding="utf-8") as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            self.logger.error(f"Failed to save minimal summaries: {e}")
-        
-        return result
 
     def _optimize_transcript_storage(self, transcript_data: Dict[str, Any]) -> Dict[str, Any]:
         """Optimize transcript data for storage by removing unnecessary word-level data."""

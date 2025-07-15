@@ -30,7 +30,7 @@ topics:
   min_topic_confidence: 0.3
   max_topics_per_block: 3
 
-summarization:
+## Summarization feature removed
   model: "facebook/bart-large-cnn"
   max_length: 150
   min_length: 30

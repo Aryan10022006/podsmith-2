@@ -93,7 +93,7 @@ if optimal_k > 1 and scores[optimal_k] < 0.3:
 3. Transcription → Memory Cleanup + Transcript Optimization
 4. Diarization → Memory Cleanup
 5. Emotion Detection → Memory Cleanup
-6. Summarization (Optimized) → Memory Cleanup
+## Summarization feature removed
 ```
 
 ## Expected Results

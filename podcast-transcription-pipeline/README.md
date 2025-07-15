@@ -43,7 +43,7 @@ podcast-transcription-pipeline
 │   │   ├── emotion_detector.py
 │   │   ├── semantic_segmenter.py
 │   │   ├── topic_classifier.py
-│   │   ├── summarizer.py
+│   │   # summarizer.py removed
 │   │   └── keyword_extractor.py
 │   ├── utils
 │   │   ├── logger.py

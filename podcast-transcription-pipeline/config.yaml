@@ -1,61 +1,155 @@
-# Main configuration file for podcast transcription pipeline
+# Optimized Configuration for Podcast Transcription Pipeline
+# Single-pass processing with shared embeddings and maximum efficiency
+
+# Audio Processing Optimization
 audio:
   sample_rate: 16000
-  chunk_size: 30  # seconds
-  max_file_size: 1000  # MB
-  supported_formats: ['.wav', '.mp3', '.m4a', '.flac', '.ogg']
+  chunk_size: 30  # seconds - optimized for memory efficiency
+  overlap_duration: 2  # seconds - for seamless processing
+  max_file_size: 2000  # MB - increased limit
+  supported_formats: ['.wav', '.mp3', '.m4a', '.flac', '.ogg', '.aac', '.mp4', '.avi']
+  preprocessing:
+    normalize_audio: true
+    noise_reduction: false  # Disable for speed unless needed
+    voice_activity_detection: true
 
+# Shared Embedding Architecture
+optimization:
+  single_pass_processing: true
+  shared_embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  embedding_cache_size: 1000  # Number of cached embeddings
+  memory_optimization: true
+  batch_processing: true
+  parallel_analysis: true
+  checkpoint_frequency: 300  # seconds
+
+# Transcription with WhisperX optimization
 transcription:
-  model: "large-v3"  # Whisper model
+  model: "large-v3"  # Best accuracy
   language: "auto"
   temperature: 0.0
-  beam_size: 5
-  best_of: 5
+  beam_size: 1  # Optimized for speed
+  best_of: 1   # Optimized for speed
   patience: 1.0
+  compression_ratio_threshold: 2.4
+  logprob_threshold: -1.0
+  no_speech_threshold: 0.6
+  condition_on_previous_text: true
+  word_timestamps: true
+  prepend_punctuations: "\"'"¿([{-"
+  append_punctuations: "\"'.。,，!！?？:：")]}、"
 
+# Speaker Diarization with shared audio features
 diarization:
   model: "pyannote/speaker-diarization-3.1"
+  embedding_model: "pyannote/embedding"  # Shared with emotion detection
   min_speakers: 1
   max_speakers: 10
   clustering_threshold: 0.7
+  min_segment_length: 1.0  # seconds
+  onset_threshold: 0.5
+  offset_threshold: 0.5
+  use_shared_features: true
 
+# Dual Emotion Detection (optimized)
 emotion:
   text_model: "j-hartmann/emotion-english-distilroberta-base"
   audio_model: "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
   confidence_threshold: 0.5
+  batch_processing: true
+  parallel_processing: true
+  shared_text_embeddings: true
+  emotions: ["joy", "sadness", "anger", "fear", "surprise", "disgust", "neutral"]
 
-topics:
-  model: "sentence-transformers/all-MiniLM-L6-v2"
+# Semantic Analysis with clustering
+semantic:
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"  # Shared embedding
   clustering_method: "kmeans"
-  min_topic_confidence: 0.3
-  max_topics_per_block: 3
+  min_segment_length: 50  # words
+  max_segment_length: 300  # words
+  similarity_threshold: 0.7
+  topic_coherence_threshold: 0.3
+  use_cached_embeddings: true
 
-summarization:
-  model: "facebook/bart-large-cnn"
-  max_length: 150
-  min_length: 30
-  length_penalty: 2.0
-  num_beams: 4
+# Topic Classification
+topics:
+  model: "sentence-transformers/all-MiniLM-L6-v2"  # Shared
 
+# Multi-method keyword extraction
 keywords:
-  method: "tfidf"  # or "yake", "textrank"
+  methods: ["tfidf", "yake", "textrank"]  # Multiple methods for robustness
   max_keywords_global: 20
   max_keywords_per_block: 10
   min_keyword_score: 0.1
+  deduplicate: true
+  include_phrases: true
+  max_phrase_length: 4
 
+# Device and Performance Optimization
 processing:
-  device: "auto"  # auto, cuda, cpu
+  device: "auto"  # auto-detect best device
+  fallback_cpu: true
   batch_size: 8
   num_workers: 4
-  memory_limit: "8GB"
-  
-validation:
-  min_transcript_length: 10
-  max_empty_blocks: 0.1  # 10% of blocks can be empty
-  min_confidence_threshold: 0.6
+  memory_limit: "auto"  # Auto-detect available memory
+  gpu_memory_fraction: 0.8
+  enable_mixed_precision: true
+  dataloader_num_workers: 2
+  prefetch_factor: 2
 
+# Output Structure (RAG-optimized)
 output:
-  base_dir: "./output"
-  session_prefix: "session"
-  compression: false
-  backup_intermediates: true
+  base_dir: "output"
+  format: "json"
+  include_metadata: true
+  include_timestamps: true
+  include_confidence_scores: true
+  structured_for_rag: true
+  chunk_size: 512  # tokens - optimal for RAG
+  overlap_size: 50   # tokens
+  metadata_fields: ["speaker", "emotion", "topic", "confidence", "start_time", "end_time"]
+
+# Session Management and Recovery
+session:
+  auto_resume: true
+  checkpoint_steps: ["transcription", "diarization", "emotion_analysis", "semantic_segmentation"]
+  cleanup_on_success: false
+  max_session_age_days: 30
+  compression: true
+
+# Logging and Monitoring
+logging:
+  level: "INFO"
+  file_logging: true
+  console_logging: true
+  performance_logging: true
+  memory_monitoring: true
+  step_timing: true
+  detailed_errors: true
+
+# Validation and Quality Control
+validation:
+  enable: true
+  quality_thresholds:
+    transcription_confidence: 0.7
+    diarization_purity: 0.8
+    emotion_confidence: 0.5
+    topic_coherence: 0.6
+  auto_retry_failed_steps: true
+  max_retries: 2
+
+# Plugin System (for extensibility)
+plugins:
+  enabled: []
+  custom_analyzers: []
+  hooks:
+    pre_processing: []
+    post_processing: []
+
+# RAG Integration Helpers
+rag:
+  enable_vector_preparation: true
+  chunk_strategy: "semantic"  # or "fixed", "sliding"
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"  # Shared
+  metadata_inclusion: ["speaker", "timestamp", "emotion", "topic"]
+  export_format: "jsonl"  # Optimized for vector databases

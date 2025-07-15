@@ -6,7 +6,7 @@ import tempfile
 
 from src.analysis.emotion_detector import EmotionDetector
 from src.analysis.semantic_segmenter import SemanticSegmenter
-from src.analysis.summarizer import Summarizer
+# Summarizer import removed
 from src.analysis.keyword_extractor import KeywordExtractor
 
 class TestAnalysisComponents(unittest.TestCase):
@@ -108,22 +108,7 @@ class TestAnalysisComponents(unittest.TestCase):
         self.assertIn("start", blocks[0])
         self.assertIn("end", blocks[0])
     
-    @patch('src.analysis.summarizer.pipeline')
-    def test_summarizer_block_summaries(self, mock_pipeline):
-        """Test summarization of semantic blocks."""
-        # Mock the summarization pipeline
-        mock_sum_pipeline = MagicMock()
-        mock_sum_pipeline.return_value = [{"summary_text": "This is a test summary."}]
-        mock_pipeline.return_value = mock_sum_pipeline
-        
-        summarizer = Summarizer()
-        summarizer.summarization_pipeline = mock_sum_pipeline
-        
-        summaries = summarizer.summarize_blocks(self.sample_blocks)
-        
-        self.assertEqual(len(summaries), len(self.sample_blocks))
-        self.assertIn("summary", summaries[0])
-        self.assertIn("block_id", summaries[0])
+    # Summarizer test removed
     
     def test_keyword_extractor_frequency_method(self):
         """Test keyword extraction using frequency method."""
