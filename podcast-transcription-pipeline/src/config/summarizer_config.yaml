@@ -1,0 +1,98 @@
+# Advanced Summarizer Configuration
+
+# Model Configuration
+models:
+  # Primary model for high-quality summarization
+  primary_model: "facebook/bart-large-cnn"
+  
+  # Fallback model for resource-constrained environments  
+  fallback_model: "sshleifer/distilbart-cnn-12-6"
+  
+  # LLM model for advanced summarization (requires OpenAI API key)
+  llm_model: "gpt-3.5-turbo"
+  
+  # Embeddings model for semantic analysis
+  embeddings_model: "sentence-transformers/all-MiniLM-L6-v2"
+
+# Processing Configuration
+processing:
+  # Maximum input length for transformer models
+  max_input_length: 1024
+  
+  # Batch processing settings
+  batch_processing:
+    enabled: true
+    batch_size: 4
+    max_memory_usage: 0.8  # 80% of available GPU memory
+  
+  # Summary length configurations
+  summary_lengths:
+    short:
+      max_length: 50
+      min_length: 10
+    medium:
+      max_length: 150
+      min_length: 30
+    long:
+      max_length: 300
+      min_length: 50
+
+# LLM-Based Domain Detection and Analysis
+llm_domain_detection:
+  enabled: true
+  use_adaptive_prompting: true
+  generate_custom_summaries: true
+  
+  # Domain analysis settings
+  max_domains_per_content: 3
+  domain_confidence_threshold: 0.6
+  
+# Quality Assessment Configuration  
+quality_thresholds:
+  min_semantic_coherence: 0.6
+  min_information_density: 0.4
+  max_repetition_ratio: 0.3
+  
+  # Quality grades
+  excellent_threshold: 0.8
+  good_threshold: 0.6
+  fair_threshold: 0.4
+
+# Performance Optimization
+optimization:
+  # Memory management
+  clear_cache_after_batch: true
+  max_concurrent_requests: 3
+  
+  # Model loading
+  lazy_loading: true
+  model_quantization: false  # Set to true for memory-constrained environments
+  
+  # Text preprocessing
+  max_preprocessing_length: 10000
+  remove_filler_words: true
+  clean_punctuation: true
+
+# Output Configuration
+output:
+  # Include additional metadata in summaries
+  include_metadata: true
+  include_quality_metrics: true
+  include_domain_analysis: true
+  
+  # Summary format options
+  format:
+    include_timestamps: false
+    include_speaker_info: false
+    markdown_formatting: false
+  
+  # Validation
+  validate_summaries: true
+  auto_heal_poor_quality: true
+  
+# Logging Configuration
+logging:
+  log_performance_metrics: true
+  log_quality_scores: true
+  log_domain_detection: true
+  detailed_error_logging: true

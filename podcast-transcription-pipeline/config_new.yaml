@@ -1,0 +1,61 @@
+# Main configuration file for podcast transcription pipeline
+audio:
+  sample_rate: 16000
+  chunk_size: 30  # seconds
+  max_file_size: 1000  # MB
+  supported_formats: ['.wav', '.mp3', '.m4a', '.flac', '.ogg']
+
+transcription:
+  model: "large-v3"  # Whisper model
+  language: "auto"
+  temperature: 0.0
+  beam_size: 5
+  best_of: 5
+  patience: 1.0
+
+diarization:
+  model: "pyannote/speaker-diarization-3.1"
+  min_speakers: 1
+  max_speakers: 10
+  clustering_threshold: 0.7
+
+emotion:
+  text_model: "j-hartmann/emotion-english-distilroberta-base"
+  audio_model: "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
+  confidence_threshold: 0.5
+
+topics:
+  model: "sentence-transformers/all-MiniLM-L6-v2"
+  clustering_method: "kmeans"
+  min_topic_confidence: 0.3
+  max_topics_per_block: 3
+
+summarization:
+  model: "facebook/bart-large-cnn"
+  max_length: 150
+  min_length: 30
+  length_penalty: 2.0
+  num_beams: 4
+
+keywords:
+  method: "tfidf"  # or "yake", "textrank"
+  max_keywords_global: 20
+  max_keywords_per_block: 10
+  min_keyword_score: 0.1
+
+processing:
+  device: "auto"  # auto, cuda, cpu
+  batch_size: 8
+  num_workers: 4
+  memory_limit: "8GB"
+  
+validation:
+  min_transcript_length: 10
+  max_empty_blocks: 0.1  # 10% of blocks can be empty
+  min_confidence_threshold: 0.6
+
+output:
+  base_dir: "./output"
+  session_prefix: "session"
+  compression: false
+  backup_intermediates: true

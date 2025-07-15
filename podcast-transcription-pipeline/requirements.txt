@@ -1,0 +1,39 @@
+# Core dependencies for podcast transcription and analysis pipeline
+torch>=2.0.0
+torchaudio>=2.0.0
+transformers>=4.30.0
+openai-whisper>=20231117
+pyannote.audio>=3.1.0
+librosa>=0.10.0
+soundfile>=0.12.0
+scikit-learn>=1.3.0
+numpy>=1.24.0
+pandas>=2.0.0
+nltk>=3.8.0
+spacy>=3.6.0
+textblob>=0.17.0
+sentence-transformers>=2.2.0
+accelerate>=0.20.0
+datasets>=2.12.0
+audioread>=3.0.0
+pydub>=0.25.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+tqdm>=4.65.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+yake>=0.4.8
+textstat>=0.7.3
+speechbrain>=0.5.16
+jsonschema>=4.0.0
+pytest>=7.0.0
+pytest-cov>=4.0.0
+# Additional dependencies for unified audio processing
+joblib>=1.3.0  # For model serialization in emotion detection
+flask>=2.3.0
+# Advanced summarization dependencies
+openai>=1.0.0  # For LLM-based summarization (optional)
+yake>=0.4.8  # For keyword extraction  
+textstat>=0.7.3  # For text complexity analysis
+sentence-transformers>=2.2.0  # For semantic embeddings
+scikit-learn>=1.3.0  # For clustering and TF-IDF

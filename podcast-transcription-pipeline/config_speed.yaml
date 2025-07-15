@@ -1,0 +1,60 @@
+# Fast Pipeline Configuration - Optimized for Speed
+output:
+  base_dir: "output"
+
+# Transcription settings - Optimized for speed
+transcription:
+  model: "base"  # Much faster than large-v3
+  device: "auto"
+  
+# Diarization settings - Fast fallback
+diarization:
+  model: "pyannote/speaker-diarization-3.1"
+  min_speakers: 1
+  max_speakers: 10
+  device: "auto"
+
+# Emotion detection settings - Batch processing
+emotion:
+  text_model: "j-hartmann/emotion-english-distilroberta-base"
+  audio_model: "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
+  device: "auto"
+
+# Summarization settings - Fast model
+summarization:
+  model: "facebook/bart-base"  # Faster than bart-large-cnn
+  max_length: 150
+  min_length: 30
+  device: "auto"
+
+# Semantic segmentation - Optimized
+semantic:
+  model: "sentence-transformers/all-MiniLM-L6-v2"
+  min_block_duration: 20.0
+  semantic_threshold: 0.4
+  device: "auto"
+
+# Topics/Semantic settings
+topics:
+  model: "sentence-transformers/all-MiniLM-L6-v2"
+  device: "auto"
+
+# Keyword extraction - Simple and fast
+keywords:
+  method: "tfidf"
+  max_keywords: 10
+  min_frequency: 2
+
+# Validation settings
+validation:
+  min_confidence_threshold: 0.6
+  min_duration: 10
+  max_duration: 7200
+
+# Speed optimization settings
+speed_optimization:
+  chunking: true
+  chunk_duration: 30
+  parallel_processing: true
+  max_workers: 2
+  aggressive_cleanup: true
